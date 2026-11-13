@@ -153,6 +153,7 @@
     .trophy { font-size: 62px; animation: bounce 1.5s ease infinite; }
     .result-score { font: 700 clamp(3rem, 13vw, 5.5rem) "Space Grotesk", sans-serif; letter-spacing: -.08em; margin: 7px 0; background: linear-gradient(110deg, var(--accent), var(--accent-2)); background-clip: text; -webkit-background-clip: text; color: transparent; }
     .result-message { color: var(--muted); margin: 0 auto 25px; max-width: 420px; line-height: 1.5; }
+    .best-score { color: var(--accent-2); font-weight: 700; }
     footer { color: var(--muted); text-align: center; font-size: .75rem; margin-top: 18px; }
 
     @keyframes drift { to { transform: translateY(28px); } }
@@ -180,6 +181,7 @@
       <div class="eyebrow">Mission briefing</div>
       <h2>How far does your space knowledge reach?</h2>
       <p>Launch into 10 questions about planets, stars, missions, and the mysteries beyond Earth.</p>
+      <p class="best-score" id="introBestScore" hidden></p>
       <button class="primary-btn" id="startBtn">Begin exploration&nbsp; 🚀</button>
     </section>
 
@@ -202,6 +204,7 @@
       <h2>Your cosmic score</h2>
       <div class="result-score" id="finalScore">0/10</div>
       <p class="result-message" id="resultMessage"></p>
+      <p class="best-score" id="resultBestScore" hidden></p>
       <button class="restart-btn" id="restartBtn">Play again&nbsp; 🔁</button>
     </section>
     <footer>Made for curious minds · Keep looking up ✨</footer>
@@ -223,7 +226,37 @@
 
     const $ = id => document.getElementById(id);
     let current = 0, score = 0, answered = false;
+    const bestScoreKey = "orbitQuestBestScore";
+    let bestScore = loadBestScore();
     const intro = $("intro"), quiz = $("quiz"), results = $("results");
+
+    function loadBestScore() {
+      try {
+        const stored = localStorage.getItem(bestScoreKey);
+        if (stored === null || stored.trim() === "") return null;
+        const saved = Number(stored);
+        return Number.isInteger(saved) && saved >= 0 && saved <= questions.length ? saved : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function updateBestScore(completedScore) {
+      if (bestScore !== null && completedScore <= bestScore) return;
+      bestScore = completedScore;
+      try {
+        localStorage.setItem(bestScoreKey, String(bestScore));
+      } catch {
+        // Keep the in-memory best score when browser storage is unavailable.
+      }
+    }
+
+    function renderBestScore() {
+      [$("introBestScore"), $("resultBestScore")].forEach(element => {
+        element.hidden = bestScore === null;
+        if (bestScore !== null) element.textContent = `Best score: ${bestScore}/${questions.length}`;
+      });
+    }
 
     function renderQuestion() {
       const item = questions[current];
@@ -266,6 +299,8 @@
     }
 
     function showResults() {
+      updateBestScore(score);
+      renderBestScore();
       quiz.classList.remove("active");
       results.classList.add("active");
       $("finalScore").textContent = `${score}/${questions.length}`;
@@ -286,6 +321,7 @@
       document.body.dataset.theme = isLight ? "dark" : "light";
       $("themeToggle").textContent = isLight ? "☀️" : "🌙";
     });
+    renderBestScore();
   </script>
 </body>
 </html>
